@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Jackpot 3x3</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', sans-serif;
+      background-color: #0b0f1a;
+      color: #f0f0f0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px;
+    }
+
+    h1 {
+      color: #00bfff;
+      font-size: 4em;
+      margin-bottom: 20px;
+    }
+
+    #balance {
+      font-size: 2em;
+      margin-bottom: 20px;
+      color: #ccc;
+    }
+
+    #grid {
+      display: grid;
+      grid-template-columns: repeat(3, 150px);
+      grid-template-rows: repeat(3, 150px);
+      gap: 20px;
+      margin: 30px 0;
+    }
+
+    .cell {
+      background-color: #1c1f2b;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 4em;
+      border-radius: 20px;
+      box-shadow: 0 0 15px #000;
+      transition: transform 0.2s ease;
+    }
+
+    .controls {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 20px;
+    }
+
+    input[type="number"] {
+      padding: 20px;
+      font-size: 1.5em;
+      width: 250px;
+      border: none;
+      border-radius: 15px;
+      background-color: #222;
+      color: #fff;
+    }
+
+    button {
+      padding: 18px 40px;
+      font-size: 1.5em;
+      border: none;
+      border-radius: 15px;
+      background-color: #00bfff;
+      color: #000;
+      font-weight: bold;
+      cursor: pointer;
+      width: 250px;
+    }
+
+    button:disabled {
+      background-color: #555;
+      cursor: not-allowed;
+    }
+
+    .result {
+      font-size: 2em;
+      margin-top: 30px;
+    }
+
+    .win { color: #32cd32; }
+    .lose { color: #ff6347; }
+    .jackpot { color: gold; font-weight: bold; text-shadow: 0 0 8px gold; }
+
+    #startScreen {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: #0b0f1a;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 10;
+    }
+
+    #startScreen input, #startScreen button {
+      margin: 15px;
+    }
+
+  </style>
+</head>
+<body>
+
+  <div id="startScreen">
+    <h1>Bem-vindo ao Jackpot 3x3!</h1>
+    <input type="number" id="initialBalance" placeholder="Digite o saldo inicial">
+    <button onclick="startGame()">Começar</button>
+  </div>
+
+  <h1>Jogo do Jackpot 3x3</h1>
+  <div id="balance">Saldo: R$ 0.00</div>
+
+  <div class="controls">
+    <input type="number" id="bet" placeholder="Valor da aposta">
+    <button onclick="play()" id="playBtn">Jogar</button>
+    <button onclick="resetGame()">Reiniciar</button>
+  </div>
+
+  <div id="grid">
+    <div class="cell" id="c0"></div>
+    <div class="cell" id="c1"></div>
+    <div class="cell" id="c2"></div>
+    <div class="cell" id="c3"></div>
+    <div class="cell" id="c4"></div>
+    <div class="cell" id="c5"></div>
+    <div class="cell" id="c6"></div>
+    <div class="cell" id="c7"></div>
+    <div class="cell" id="c8"></div>
+  </div>
+
+  <div class="result" id="result">Faça sua aposta!</div>
+
+  <script>
+    const emojis = ['🍒', '🍋', '💎', '7️⃣', '🍀', '🔔'];
+    let balance = 0;
+    let isSpinning = false;
+    let isJackpot = false;
+
+    function startGame() {
+      const input = parseFloat(document.getElementById("initialBalance").value);
+      if (isNaN(input) || input <= 0) return alert("Digite um saldo válido!");
+      balance = input;
+      updateBalance();
+      document.getElementById("startScreen").style.display = "none";
+    }
+
+    function updateBalance() {
+      document.getElementById('balance').textContent = `Saldo: R$ ${balance.toFixed(2)}`;
+    }
+
+    function getRandomEmoji() {
+      const chances = [...emojis, ...emojis, ...emojis]; // aumenta chance de repetição
+      return chances[Math.floor(Math.random() * chances.length)];
+    }
+
+    async function play() {
+      if (isSpinning) return;
+
+      const bet = parseFloat(document.getElementById('bet').value);
+      const result = document.getElementById('result');
+      if (isNaN(bet) || bet <= 0) {
+        result.textContent = "Digite um valor válido!";
+        result.className = "result";
+        return;
+      }
+
+      if (bet > balance) {
+        result.textContent = "Saldo insuficiente!";
+        result.className = "result";
+        return;
+      }
+
+      balance -= bet;
+      updateBalance();
+      result.textContent = "Girando...";
+      result.className = "result";
+      isJackpot = false;
+
+      const board = [];
+      isSpinning = true;
+
+      // Se for Jackpot, exibe 1 por vez com mais chances de acontecer
+      if (Math.random() < 0.15) { // 15% chance de Jackpot (ajuste conforme necessidade)
+        isJackpot = true;
+        // Mostrar um por vez (efeito Jackpot)
+        for (let i = 0; i < 9; i++) {
+          await new Promise(r => setTimeout(r, 200)); // delay
+          const emoji = getRandomEmoji();
+          board.push(emoji);
+          document.getElementById(`c${i}`).textContent = emoji;
+        }
+      } else {
+        // Embaralhamento rápido entre todos os emojis
+        for (let i = 0; i < 9; i++) {
+          board.push(getRandomEmoji());
+          document.getElementById(`c${i}`).textContent = "";
+        }
+
+        // Efeito de embaralhamento rápido
+        for (let i = 0; i < 9; i++) {
+          setTimeout(() => {
+            const emoji = getRandomEmoji();
+            document.getElementById(`c${i}`).textContent = emoji;
+          }, i * 100);
+        }
+      }
+
+      isSpinning = false;
+
+      const wins = checkWins(board);
+      let payout = 0;
+
+      if (wins >= 1) {
+        payout = bet * (wins * 2);
+        result.innerHTML = `Você venceu ${wins} linha(s)! Ganhou R$ ${payout.toFixed(2)}`;
+        result.className = "result win";
+      } else {
+        result.innerHTML = `Você perdeu R$ ${bet.toFixed(2)}. Tente de novo!`;
+        result.className = "result lose";
+      }
+
+      // Jackpot (todos iguais)
+      if (isJackpot && board.every(e => e === board[0])) {
+        payout = bet * 10; // Jackpot 10x o valor apostado
+        result.innerHTML = `JACKPOT TOTAL! Você ganhou R$ ${payout.toFixed(2)}!`;
+        result.className = "result jackpot";
+      }
+
+      balance += payout;
+      updateBalance();
+
+      if (balance <= 0) {
+        result.innerHTML += `<br>Seu saldo acabou!`;
+        document.getElementById('playBtn').disabled = true;
+      }
+    }
+
+    function checkWins(b) {
+      const lines = [
+        [0, 1, 2], [3, 4, 5], [6, 7, 8], // linhas
+        [0, 3, 6], [1, 4, 7], [2, 5, 8], // colunas
+        [0, 4, 8], [2, 4, 6]             // diagonais
+      ];
+      let winCount = 0;
+      lines.forEach(line => {
+        const [a, b1, c] = line;
+        if (b[a] === b[b1] && b[a] === b[c]) winCount++;
+      });
+      return winCount;
+    }
+
+    function resetGame() {
+      document.getElementById("startScreen").style.display = "flex";
+      document.getElementById('playBtn').disabled = false;
+      document.getElementById('result').textContent = "Faça sua aposta!";
+      for (let i = 0; i < 9; i++) {
+        document.getElementById(`c${i}`).textContent = "";
+      }
+    }
+  </script>
+
+</body>
+</html>
